@@ -1,0 +1,1128 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Family Portfolio – Teaching Lab</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code&display=swap"
+			rel="stylesheet"
+		/>
+
+		<!-- CodeMirror for syntax highlighting in Split View -->
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css"
+		/>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/xml/xml.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/css/css.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/htmlmixed/htmlmixed.min.js"></script>
+
+		<style>
+			/* ===== TEACHER'S LAB UI (Now Light Theme) ===== */
+			:root {
+				--lab-bg: #f3f4f6; /* gray-100 */
+				--lab-card: #ffffff;
+				--lab-border: #e5e7eb; /* gray-200 */
+				--lab-accent: #3b82f6; /* blue-500 */
+				--lab-text: #111827; /* gray-900 */
+				--lab-muted: #6b7280; /* gray-500 */
+			}
+
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: "Inter", system-ui, sans-serif;
+				background: var(--lab-bg);
+				color: var(--lab-text);
+				min-height: 100vh;
+			}
+
+			/* Toolbar (Smaller Pills) */
+			.toolbar {
+				position: fixed;
+				top: 0;
+				width: 100%;
+				z-index: 1100;
+				padding: 10px 24px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 12px;
+			}
+
+			.toolbar button {
+				padding: 6px 16px; /* Smaller padding */
+				border: 1px solid var(--lab-border);
+				background: var(--lab-card);
+				border-radius: 9999px; /* Pill */
+				font-weight: 500;
+				font-size: 0.85rem; /* Smaller font */
+				cursor: pointer;
+				color: var(--lab-muted);
+				font-family: "Inter", sans-serif;
+				display: flex;
+				align-items: center;
+				gap: 6px;
+				transition: all 0.2s;
+			}
+
+			.toolbar button svg {
+				width: 14px;
+				height: 14px;
+			}
+
+			.toolbar button.active {
+				background: var(--lab-accent);
+				color: white;
+				border-color: var(--lab-accent);
+			}
+
+			.toolbar button:hover:not(.active) {
+				background: #f9fafb;
+				color: var(--lab-text);
+			}
+
+			/* Layout Containers */
+			#previewContainer {
+				display: block;
+			}
+
+			#splitContainer {
+				display: none;
+				height: calc(100vh - 53px); /* Adjusted for smaller toolbar */
+			}
+
+			.split-pane {
+				display: flex;
+				height: 100%;
+			}
+
+			.code-editor {
+				width: 50%;
+				background: #ffffff;
+				border-right: 1px solid var(--lab-border);
+				display: flex;
+				flex-direction: column;
+			}
+
+			/* CodeMirror overrides */
+			.CodeMirror {
+				width: 100%;
+				height: 100%;
+				font-family: "Fira Code", monospace;
+				font-size: 0.95rem;
+				padding: 16px 0;
+				line-height: 1.6;
+			}
+
+			.preview-frame {
+				width: 50%;
+				background: #ffffff;
+			}
+
+			.preview-frame iframe {
+				width: 100%;
+				height: 100%;
+				border: none;
+				display: block;
+			}
+
+			/* Inspector Overlays */
+			.inspect-highlight {
+				position: absolute;
+				background: rgba(59, 130, 246, 0.15); /* Light blue tint */
+				border: 2px solid var(--lab-accent);
+				pointer-events: none;
+				z-index: 1001;
+				transition: all 0.1s ease;
+			}
+
+			.inspect-highlight.locked {
+				border: 2px dashed #ef4444; /* Red dashed border when locked */
+				background: rgba(239, 68, 68, 0.1);
+			}
+
+			/* Fixed Inspector Panel (Light Theme) */
+			#inspectorPanel {
+				display: none;
+				position: fixed;
+				top: 70px;
+				right: 24px;
+				width: 320px;
+				background: rgba(255, 255, 255, 0.95);
+				backdrop-filter: blur(16px);
+				border: 1px solid var(--lab-border);
+				border-radius: 8px;
+				padding: 20px;
+				box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.15);
+				z-index: 1050;
+			}
+
+			#inspectorPanel h3 {
+				margin-bottom: 16px;
+				font-size: 1.1rem;
+				color: var(--lab-text);
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+			}
+
+			.tag-badge {
+				background: #f3f4f6;
+				color: var(--lab-accent);
+				padding: 4px 10px;
+				border-radius: 4px;
+				font-family: "Fira Code", monospace;
+				font-size: 0.85rem;
+				margin-bottom: 16px;
+				display: inline-block;
+				border: 1px solid var(--lab-border);
+			}
+
+			.tag-badge.locked-badge {
+				background: #fee2e2;
+				color: #ef4444;
+				border-color: #fca5a5;
+			}
+
+			#cssDetails {
+				background: #f9fafb;
+				border: 1px solid var(--lab-border);
+				border-radius: 4px;
+				padding: 16px;
+				font-family: "Fira Code", monospace;
+				font-size: 0.85rem;
+				color: #374151; /* gray-700 */
+				line-height: 1.7;
+				max-height: 400px;
+				overflow-y: auto;
+			}
+
+			.css-prop {
+				color: #8b5cf6;
+			} /* purple-500 */
+			.css-val {
+				color: #059669;
+			} /* emerald-600 */
+
+			.inspect-hint {
+				color: var(--lab-muted);
+				font-size: 0.8rem;
+				margin-top: 16px;
+				text-align: center;
+			}
+
+			body.inspect-mode #familySite {
+				cursor: crosshair;
+			}
+			body.inspect-mode #familySite * {
+				pointer-events: auto !important;
+			}
+			body.inspect-mode #familySite a,
+			body.inspect-mode #familySite button {
+				pointer-events: none !important;
+			}
+
+			/* Container for student site */
+			#familySite {
+				min-height: 100vh;
+				background: #ffffff;
+				color: #111111;
+			}
+		</style>
+	</head>
+	<body>
+		<!-- ========== TEACHER TOOLBAR ========== -->
+		<div class="toolbar">
+			<button id="btnPreview" class="active" onclick="setMode('preview')">
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<path
+						d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+					></path>
+					<circle cx="12" cy="12" r="3"></circle>
+				</svg>
+				Final Product
+			</button>
+			<button id="btnInspect" onclick="setMode('inspect')">
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<circle cx="11" cy="11" r="8"></circle>
+					<line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+				</svg>
+				CSS Inspector
+			</button>
+			<button id="btnSplit" onclick="setMode('split')">
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+				>
+					<polyline points="16 18 22 12 16 6"></polyline>
+					<polyline points="8 6 2 12 8 18"></polyline>
+				</svg>
+				Code & Live View
+			</button>
+		</div>
+
+		<!-- Inspector Highlight Box -->
+		<div
+			id="highlightBox"
+			class="inspect-highlight"
+			style="display: none"
+		></div>
+
+		<!-- ========== PREVIEW MODE ========== -->
+		<div id="previewContainer">
+			<div id="familySite">
+				<!-- Student CSS -->
+				<style id="studentCss">
+					/* ----- Sharp Light Theme Student CSS ----- */
+					:root {
+						--bg: #ffffff;
+						--surface: #f9fafb;
+						--border: #e5e7eb;
+						--text-main: #111827;
+						--text-muted: #4b5563;
+						--accent: #2563eb;
+					}
+
+					.student-page {
+						font-family: "Inter", system-ui, sans-serif;
+						background-color: var(--bg);
+						color: var(--text-main);
+						line-height: 1.6;
+						min-height: 100vh;
+					}
+
+					.container {
+						max-width: 1200px;
+						margin: 0 auto;
+						padding: 0 24px;
+					}
+
+					/* 1. HERO SECTION */
+					.hero {
+						position: relative;
+						height: 90vh;
+						min-height: 600px;
+						background-image: url("https://images.unsplash.com/photo-1511895426328-dc8714191300?q=80&w=2000&auto=format&fit=crop");
+						background-size: cover;
+						background-position: center;
+						display: flex;
+						align-items: flex-end;
+					}
+
+					.hero-overlay {
+						position: absolute;
+						top: 0;
+						left: 0;
+						width: 100%;
+						height: 100%;
+						background: linear-gradient(
+							to top,
+							rgba(0, 0, 0, 0.85) 0%,
+							rgba(0, 0, 0, 0) 70%
+						);
+					}
+
+					.hero-content {
+						position: relative;
+						z-index: 10;
+						width: 100%;
+						padding: 60px 40px;
+						color: #ffffff;
+					}
+
+					.hero-title {
+						font-size: 5rem;
+						font-weight: 700;
+						margin-bottom: 16px;
+						line-height: 1;
+						letter-spacing: -0.03em;
+						text-transform: uppercase;
+					}
+
+					.hero-title span {
+						color: #60a5fa;
+					}
+
+					.hero-desc {
+						font-size: 1.5rem;
+						max-width: 600px;
+						opacity: 0.9;
+					}
+
+					/* 2. INFINITE MARQUEE STRIP */
+					.marquee-container {
+						background: var(--surface);
+						border-top: 1px solid var(--border);
+						border-bottom: 1px solid var(--border);
+						padding: 24px 0;
+						margin-bottom: 80px;
+						overflow: hidden;
+					}
+
+					.marquee-scroll {
+						display: inline-flex;
+						white-space: nowrap;
+						animation: scroll 25s linear infinite;
+					}
+
+					.marquee-content {
+						display: flex;
+						gap: 64px;
+						padding: 0 32px;
+					}
+
+					.marquee-content span {
+						color: var(--text-main);
+						font-weight: 600;
+						font-size: 1.25rem;
+						letter-spacing: 0.1em;
+						text-transform: uppercase;
+					}
+
+					.dot {
+						color: var(--text-muted) !important;
+					}
+
+					@keyframes scroll {
+						0% {
+							transform: translateX(0);
+						}
+						100% {
+							transform: translateX(-50%);
+						}
+					}
+
+					.section-title {
+						font-size: 2.5rem;
+						font-weight: 700;
+						margin-bottom: 40px;
+						text-transform: uppercase;
+						letter-spacing: -0.02em;
+						border-bottom: 4px solid var(--text-main);
+						padding-bottom: 16px;
+						display: inline-block;
+					}
+
+					/* 3. MEET THE FAMILY */
+					.family-section {
+						margin-bottom: 100px;
+					}
+
+					.members-grid {
+						display: flex;
+						flex-wrap: wrap;
+						gap: 32px;
+					}
+
+					.member-card {
+						flex: 1;
+						min-width: 500px;
+						background: var(--bg);
+						border: 1px solid var(--border);
+					}
+
+					.member-photo {
+						width: 100%;
+						height: 400px;
+						object-fit: cover;
+						border-bottom: 1px solid var(--border);
+					}
+
+					.member-info {
+						padding: 32px;
+					}
+
+					.member-name {
+						font-size: 1.5rem;
+						font-weight: 700;
+						margin-bottom: 8px;
+						text-transform: uppercase;
+					}
+
+					.member-role {
+						font-size: 1rem;
+						color: var(--accent);
+						font-weight: 600;
+						margin-bottom: 16px;
+						text-transform: uppercase;
+						letter-spacing: 0.05em;
+					}
+
+					.member-bio {
+						color: var(--text-muted);
+						font-size: 1rem;
+					}
+
+					/* 4. PHOTO GRID */
+					.gallery-section {
+						margin-bottom: 100px;
+					}
+
+					.photo-grid {
+						display: grid;
+						grid-template-columns: repeat(4, 1fr);
+						grid-auto-rows: 250px;
+						gap: 16px;
+					}
+
+					.grid-item {
+						width: 100%;
+						height: 100%;
+						object-fit: cover;
+					}
+
+					.item-large {
+						grid-column: span 2;
+						grid-row: span 2;
+					}
+					.item-wide {
+						grid-column: span 2;
+					}
+					.item-tall {
+						grid-row: span 2;
+					}
+
+					/* 5. CONTACT FORM */
+					.contact-section {
+						background: var(--surface);
+						padding: 80px 0;
+						border-top: 1px solid var(--border);
+					}
+
+					.contact-wrapper {
+						max-width: 600px;
+						margin: 0 auto;
+					}
+
+					.flat-form {
+						display: flex;
+						flex-direction: column;
+						gap: 24px;
+						background: var(--bg);
+						padding: 48px;
+						border: 1px solid var(--border);
+					}
+
+					.form-group {
+						display: flex;
+						flex-direction: column;
+						gap: 8px;
+					}
+
+					.form-group label {
+						font-size: 0.9rem;
+						font-weight: 600;
+						text-transform: uppercase;
+						letter-spacing: 0.05em;
+					}
+
+					.form-group label span {
+						color: #dc2626;
+					}
+
+					.flat-form input,
+					.flat-form select,
+					.flat-form textarea {
+						background: var(--surface);
+						border: 1px solid var(--border);
+						color: var(--text-main);
+						padding: 16px;
+						font-family: inherit;
+						font-size: 1rem;
+						transition: border-color 0.2s;
+						border-radius: 0;
+					}
+
+					.flat-form input:focus,
+					.flat-form select:focus,
+					.flat-form textarea:focus {
+						outline: none;
+						border-color: var(--text-main);
+					}
+
+					.flat-form input:not(:placeholder-shown):valid,
+					.flat-form textarea:not(:placeholder-shown):valid {
+						border-color: #16a34a;
+					}
+
+					.submit-btn {
+						background: var(--text-main);
+						color: var(--bg);
+						border: none;
+						padding: 16px;
+						font-weight: 700;
+						font-size: 1rem;
+						text-transform: uppercase;
+						letter-spacing: 0.05em;
+						cursor: pointer;
+						margin-top: 16px;
+						border-radius: 0;
+					}
+
+					.submit-btn:hover {
+						background: var(--accent);
+					}
+
+					/* 6. FOOTER */
+					.footer {
+						background: var(--text-main);
+						color: var(--bg);
+						text-align: center;
+						padding: 40px;
+						font-size: 0.95rem;
+					}
+
+					.footer span {
+						color: #f43f5e;
+					}
+
+					@media (max-width: 900px) {
+						.photo-grid {
+							grid-template-columns: repeat(2, 1fr);
+						}
+						.hero-title {
+							font-size: 3rem;
+						}
+					}
+					@media (max-width: 600px) {
+						.photo-grid {
+							grid-template-columns: 1fr;
+						}
+						.item-large,
+						.item-wide,
+						.item-tall {
+							grid-column: span 1;
+							grid-row: span 1;
+						}
+					}
+				</style>
+
+				<!-- Student HTML -->
+				<div id="studentHtml" class="student-page">
+					<section class="hero">
+						<div class="hero-overlay"></div>
+						<div class="hero-content container">
+							<h1 class="hero-title">
+								The <span>Chudasama</span> Family
+							</h1>
+							<p class="hero-desc">
+								Building memories, sharing laughter, and growing
+								together since 2001. Welcome to our digital
+								home.
+							</p>
+						</div>
+					</section>
+
+					<div class="marquee-container">
+						<div class="marquee-scroll">
+							<div class="marquee-content">
+								<span>Rajesh</span><span class="dot">//</span>
+								<span>Shilpa</span><span class="dot">//</span>
+								<span>Pratham</span><span class="dot">//</span>
+								<span>Mihir</span><span class="dot">//</span>
+							</div>
+							<div class="marquee-content">
+								<span>Rajesh</span><span class="dot">//</span>
+								<span>Shilpa</span><span class="dot">//</span>
+								<span>Pratham</span><span class="dot">//</span>
+								<span>Mihir</span><span class="dot">//</span>
+							</div>
+							<div class="marquee-content">
+								<span>Rajesh</span><span class="dot">//</span>
+								<span>Shilpa</span><span class="dot">//</span>
+								<span>Pratham</span><span class="dot">//</span>
+								<span>Mihir</span><span class="dot">//</span>
+							</div>
+							<div class="marquee-content">
+								<span>Rajesh</span><span class="dot">//</span>
+								<span>Shilpa</span><span class="dot">//</span>
+								<span>Pratham</span><span class="dot">//</span>
+								<span>Mihir</span><span class="dot">//</span>
+							</div>
+						</div>
+					</div>
+
+					<div class="container">
+						<section class="family-section">
+							<h2 class="section-title">Meet the Family</h2>
+							<div class="members-grid">
+								<div class="member-card">
+									<img
+										src="https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=500&auto=format&fit=crop"
+										alt="Rajesh"
+										class="member-photo"
+									/>
+									<div class="member-info">
+										<div class="member-name">
+											Rajesh Chudasama
+										</div>
+										<div class="member-role">Father</div>
+										<div class="member-bio">
+											Rajesh brings logical thinking to
+											the family. He loves weekend cycling
+											trips and experimenting with new
+											recipes in the kitchen.
+										</div>
+									</div>
+								</div>
+								<div class="member-card">
+									<img
+										src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=500&auto=format&fit=crop"
+										alt="Shilpa"
+										class="member-photo"
+									/>
+									<div class="member-info">
+										<div class="member-name">
+											Shilpa Chudasama
+										</div>
+										<div class="member-role">Mother</div>
+										<div class="member-bio">
+											A high school literature teacher who
+											instills the love of reading in
+											everyone she meets. The absolute
+											champion of family board games.
+										</div>
+									</div>
+								</div>
+								<div class="member-card">
+									<img
+										src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=500&auto=format&fit=crop"
+										alt="Pratham"
+										class="member-photo"
+									/>
+									<div class="member-info">
+										<div class="member-name">
+											Pratham Chudasama
+										</div>
+										<div class="member-role">Me</div>
+										<div class="member-bio">
+											A passionate developer and creator.
+											Always building new things and
+											exploring the latest in technology
+											and web design.
+										</div>
+									</div>
+								</div>
+								<div class="member-card">
+									<img
+										src="https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=500&auto=format&fit=crop"
+										alt="Mihir"
+										class="member-photo"
+									/>
+									<div class="member-info">
+										<div class="member-name">
+											Mihir Chudasama
+										</div>
+										<div class="member-role">
+											Younger Brother
+										</div>
+										<div class="member-bio">
+											The energetic younger brother who
+											keeps everyone on their toes. Loves
+											playing sports and cracking jokes at
+											the dinner table.
+										</div>
+									</div>
+								</div>
+							</div>
+						</section>
+
+						<section class="gallery-section">
+							<h2 class="section-title">Captured Moments</h2>
+							<div class="photo-grid">
+								<img
+									src="https://picsum.photos/800/800?random=1"
+									alt="Family Dinner"
+									class="grid-item item-large"
+								/>
+								<img
+									src="https://picsum.photos/800/800?random=2"
+									alt="Vacation"
+									class="grid-item"
+								/>
+								<img
+									src="https://picsum.photos/800/800?random=3"
+									alt="Hiking"
+									class="grid-item"
+								/>
+								<img
+									src="https://picsum.photos/800/800?random=4"
+									alt="Beach"
+									class="grid-item item-wide"
+								/>
+								<img
+									src="https://picsum.photos/800/800?random=5"
+									alt="Camping"
+									class="grid-item"
+								/>
+								<img
+									src="https://picsum.photos/800/800?random=6"
+									alt="Holiday"
+									class="grid-item"
+								/>
+								<img
+									src="https://picsum.photos/800/800?random=7"
+									alt="Camping"
+									class="grid-item"
+								/>
+								<img
+									src="https://picsum.photos/800/800?random=8"
+									alt="Holiday"
+									class="grid-item"
+								/>
+							</div>
+						</section>
+					</div>
+
+					<section class="contact-section">
+						<div class="container contact-wrapper">
+							<h2 class="section-title">Get in Touch</h2>
+							<form class="flat-form">
+								<div class="form-group">
+									<label>Your Name <span>*</span></label>
+									<input
+										type="text"
+										placeholder="Jane Doe"
+										required
+									/>
+								</div>
+								<div class="form-group">
+									<label>Connection</label>
+									<select>
+										<option>Family Friend</option>
+										<option>Relative</option>
+										<option>Colleague</option>
+									</select>
+								</div>
+								<div class="form-group">
+									<label>Message <span>*</span></label>
+									<textarea
+										rows="5"
+										placeholder="Type your message here..."
+										required
+									></textarea>
+								</div>
+								<button type="button" class="submit-btn">
+									Send Message
+								</button>
+							</form>
+						</div>
+					</section>
+				</div>
+			</div>
+		</div>
+
+		<!-- ========== SPLIT VIEW ========== -->
+		<div id="splitContainer">
+			<div class="split-pane">
+				<div class="code-editor">
+					<textarea id="codeEditor" spellcheck="false"></textarea>
+				</div>
+				<div class="preview-frame">
+					<iframe id="livePreview" title="Live Preview"></iframe>
+				</div>
+			</div>
+		</div>
+
+		<!-- ========== INSPECTOR PANEL ========== -->
+		<div id="inspectorPanel">
+			<h3>
+				CSS Inspector
+				<button
+					onclick="setMode('preview')"
+					style="
+						background: none;
+						border: none;
+						color: #a1a1aa;
+						cursor: pointer;
+						font-size: 1.2rem;
+					"
+				>
+					✕
+				</button>
+			</h3>
+			<div id="tagBadge" class="tag-badge">Hover over an element</div>
+			<div id="cssDetails">
+				Activate inspector mode and hover over elements in the page to
+				view their computed CSS properties.
+			</div>
+			<div class="inspect-hint">
+				Click an element to <b>lock</b> inspection.
+			</div>
+		</div>
+
+		<script>
+			// DOM Elements
+			const btnPreview = document.getElementById("btnPreview");
+			const btnInspect = document.getElementById("btnInspect");
+			const btnSplit = document.getElementById("btnSplit");
+			const previewContainer =
+				document.getElementById("previewContainer");
+			const splitContainer = document.getElementById("splitContainer");
+			const inspectorPanel = document.getElementById("inspectorPanel");
+			const highlightBox = document.getElementById("highlightBox");
+			const familySite = document.getElementById("familySite");
+			const cssDetails = document.getElementById("cssDetails");
+			const tagBadge = document.getElementById("tagBadge");
+			const livePreview = document.getElementById("livePreview");
+
+			let currentMode = "preview";
+			let lockedElement = null;
+
+			// Base Student Code Template (for Split View)
+			function generateStudentCode() {
+				const studentCss =
+					document.getElementById("studentCss").innerHTML;
+				const studentHtml =
+					document.getElementById("studentHtml").outerHTML;
+
+				return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Chudasama Family</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>${studentCss}</style>
+</head>
+<body>
+${studentHtml}
+</body>
+</html>`;
+			}
+
+			// Initialize CodeMirror (Syntax Highlighting)
+			const editor = CodeMirror.fromTextArea(
+				document.getElementById("codeEditor"),
+				{
+					mode: "htmlmixed",
+					lineNumbers: true,
+					indentUnit: 4,
+					tabSize: 4,
+					lineWrapping: true,
+				},
+			);
+
+			editor.setValue(generateStudentCode());
+
+			function updatePreview() {
+				livePreview.srcdoc = editor.getValue();
+			}
+
+			editor.on("change", updatePreview);
+			updatePreview();
+
+			// Mode Switching
+			window.setMode = function (mode) {
+				currentMode = mode;
+				lockedElement = null; // unlock on mode switch
+				highlightBox.classList.remove("locked");
+
+				// Reset active states
+				btnPreview.classList.remove("active");
+				btnInspect.classList.remove("active");
+				btnSplit.classList.remove("active");
+
+				// Hide containers
+				previewContainer.style.display = "none";
+				splitContainer.style.display = "none";
+				inspectorPanel.style.display = "none";
+				highlightBox.style.display = "none";
+				document.body.classList.remove("inspect-mode");
+
+				if (mode === "preview") {
+					previewContainer.style.display = "block";
+					btnPreview.classList.add("active");
+				} else if (mode === "split") {
+					splitContainer.style.display = "block";
+					btnSplit.classList.add("active");
+					// Refresh CodeMirror layout after making it visible
+					setTimeout(() => editor.refresh(), 10);
+				} else if (mode === "inspect") {
+					previewContainer.style.display = "block";
+					inspectorPanel.style.display = "block";
+					btnInspect.classList.add("active");
+					document.body.classList.add("inspect-mode");
+					tagBadge.textContent = "Hover over an element";
+					tagBadge.className = "tag-badge";
+					cssDetails.innerHTML =
+						"Activate inspector mode and hover over elements in the page to view their computed CSS properties.<br><br><b>Click on any element to lock the inspector onto it!</b>";
+				}
+			};
+
+			// CSS Inspector Logic
+			const propertiesToInspect = [
+				"display",
+				"position",
+				"flex-direction",
+				"justify-content",
+				"align-items",
+				"grid-template-columns",
+				"grid-column",
+				"grid-row",
+				"gap",
+				"margin",
+				"padding",
+				"width",
+				"height",
+				"max-width",
+				"background-color",
+				"background-image",
+				"color",
+				"font-size",
+				"font-weight",
+				"text-transform",
+				"border-radius",
+				"box-shadow",
+				"transform",
+			];
+
+			function rgbToHex(rgb) {
+				if (!rgb || rgb === "rgba(0, 0, 0, 0)") return "transparent";
+				let match = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+				if (!match) return rgb;
+				return (
+					"#" +
+					("0" + parseInt(match[1], 10).toString(16)).slice(-2) +
+					("0" + parseInt(match[2], 10).toString(16)).slice(-2) +
+					("0" + parseInt(match[3], 10).toString(16)).slice(-2)
+				);
+			}
+
+			function updateInspectorPanel(target) {
+				const rect = target.getBoundingClientRect();
+				highlightBox.style.display = "block";
+				highlightBox.style.top = rect.top + window.scrollY + "px";
+				highlightBox.style.left = rect.left + window.scrollX + "px";
+				highlightBox.style.width = rect.width + "px";
+				highlightBox.style.height = rect.height + "px";
+
+				const tagName = target.tagName.toLowerCase();
+				const className = target.className
+					? `.${target.className.split(" ").join(".")}`
+					: "";
+				const idName = target.id ? `#${target.id}` : "";
+
+				let label = `${tagName}${idName}${className}`;
+				if (lockedElement === target) {
+					label += " (Locked)";
+					tagBadge.className = "tag-badge locked-badge";
+					highlightBox.classList.add("locked");
+				} else {
+					tagBadge.className = "tag-badge";
+					highlightBox.classList.remove("locked");
+				}
+				tagBadge.textContent = label;
+
+				const computedStyle = window.getComputedStyle(target);
+				let cssOutput = "";
+
+				propertiesToInspect.forEach((prop) => {
+					let val = computedStyle.getPropertyValue(prop);
+
+					if (
+						val &&
+						val !== "none" &&
+						val !== "normal" &&
+						val !== "0px" &&
+						val !== "auto" &&
+						val !== "rgb(17, 24, 39)"
+					) {
+						if (prop.includes("color")) val = rgbToHex(val);
+						if (
+							prop === "display" &&
+							val === "block" &&
+							tagName !== "span"
+						)
+							return;
+						if (prop === "position" && val === "static") return;
+						if (prop === "transform" && val === "none") return;
+						if (prop === "border-radius" && val === "0px") return;
+						if (prop === "background-image" && val === "none")
+							return;
+
+						cssOutput += `<span class="css-prop">${prop}</span>: <span class="css-val">${val}</span>;<br>`;
+					}
+				});
+
+				if (!cssOutput)
+					cssOutput = "<i>No specific layout properties applied.</i>";
+				cssDetails.innerHTML = cssOutput;
+			}
+
+			familySite.addEventListener("mousemove", (e) => {
+				if (currentMode !== "inspect") return;
+				if (lockedElement) return; // Do nothing if we have locked onto an element
+
+				const target = e.target;
+				if (target.id === "familySite" || target.id === "studentHtml") {
+					highlightBox.style.display = "none";
+					return;
+				}
+
+				updateInspectorPanel(target);
+			});
+
+			familySite.addEventListener("mouseleave", () => {
+				if (currentMode === "inspect" && !lockedElement) {
+					highlightBox.style.display = "none";
+					tagBadge.textContent = "Hover over an element";
+					tagBadge.className = "tag-badge";
+					cssDetails.innerHTML = "Waiting for hover...";
+				}
+			});
+
+			// Click to lock inspection
+			familySite.addEventListener("click", (e) => {
+				if (currentMode === "inspect") {
+					e.preventDefault();
+					e.stopPropagation();
+
+					const target = e.target;
+					if (
+						target.id === "familySite" ||
+						target.id === "studentHtml"
+					)
+						return;
+
+					if (lockedElement === target) {
+						// Unlock if clicking the same element again
+						lockedElement = null;
+						updateInspectorPanel(target);
+					} else {
+						// Lock onto this new element
+						lockedElement = target;
+						updateInspectorPanel(target);
+						console.log(
+							"--- Locked CSS Properties for",
+							target,
+							"---",
+						);
+						console.log(window.getComputedStyle(target));
+					}
+				}
+			});
+		</script>
+	</body>
+</html>
